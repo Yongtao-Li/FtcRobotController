@@ -81,8 +81,9 @@ public final class SimulinkTeleOp extends BaseSimulinkOpMode {
 
     @Override
     protected void writeOutputs(float[] outputs) {
-        // KEEP AS IS: outputs 0..7 -> motor power; 8..15 -> servo position.
-        // Values go directly to the SDK. A servo value of zero commands position zero.
+        // KEEP AS IS: outputs 0..7 -> motor power; 8..15 -> servo command.
+        // FTC configuration selects position [0,1] or continuous-rotation power [-1,1].
+        // Zero moves a positional servo to an endpoint; zero stops a CR servo.
         robot.writeOutputs(outputs);
 
         // Graph RPM together; graph normalized power terms separately in Dashboard.

@@ -5,6 +5,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -24,6 +25,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 public final class StandardRobotIo {
     private final DcMotorEx[] motors = new DcMotorEx[8];
     private final Servo[] servos = new Servo[8];
+    private final CRServo[] crServos = new CRServo[8];
     private final DistanceSensor[] distanceSensors = new DistanceSensor[2];
     private final ColorSensor[] colorSensors = new ColorSensor[2];
     private final TouchSensor[] touchSensors = new TouchSensor[4];
@@ -41,7 +43,14 @@ public final class StandardRobotIo {
                 motors[i].setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
                 motors[i].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             }
-            servos[i] = hardwareMap.tryGet(Servo.class, "Servo" + (i + 1));
+            // The configured SDK type must match the servo's physical programmed mode.
+            String servoName = "Servo" + (i + 1);
+            servos[i] = hardwareMap.tryGet(Servo.class, servoName);
+            crServos[i] = servos[i] == null
+                    ? hardwareMap.tryGet(CRServo.class, servoName) : null;
+            if (crServos[i] != null) {
+                crServos[i].setPower(0);
+            }
         }
         imu = hardwareMap.tryGet(IMU.class, "IMU");
         if (imu != null) {
@@ -125,8 +134,17 @@ public final class StandardRobotIo {
             if (motors[i] != null) {
                 motors[i].setPower(outputs[i]);
             }
+            float command = outputs[8 + i];
+            boolean finite = !Float.isNaN(command) && !Float.isInfinite(command);
             if (servos[i] != null) {
-                servos[i].setPosition(outputs[8 + i]);
+                // Zero is a position endpoint, not a disable command.
+                if (finite) {
+                    servos[i].setPosition(Math.max(0.0f, Math.min(1.0f, command)));
+                }
+            } else if (crServos[i] != null) {
+                // Raw signed power: zero stops rotation. Invalid commands also stop.
+                crServos[i].setPower(finite
+                        ? Math.max(-1.0f, Math.min(1.0f, command)) : 0.0);
             }
         }
     }
@@ -135,6 +153,11 @@ public final class StandardRobotIo {
         for (DcMotorEx motor : motors) {
             if (motor != null) {
                 motor.setPower(0);
+            }
+        }
+        for (CRServo servo : crServos) {
+            if (servo != null) {
+                servo.setPower(0);
             }
         }
         if (limelight != null) {

@@ -33,7 +33,7 @@ public abstract class BaseSimulinkOpMode extends OpMode {
     @Override
     public final void init() {
         SimulinkRuntimeBridge.configure(inputs.length, outputSize);
-        // Configure standard devices during INIT, without motor power or servo position commands.
+        // Configure devices and stop CR servos during INIT, without positional servo moves.
         robot.initialize(hardwareMap, motorDirections, hubLogo, hubUsb, limelightPipeline);
         startModelRuntime();
         telemetry.addData("Frame size", "%d inputs / %d outputs", inputs.length, outputSize);
@@ -67,7 +67,7 @@ public abstract class BaseSimulinkOpMode extends OpMode {
     @Override
     public final void stop() {
         SimulinkRuntimeBridge.deactivate();
-        robot.stop(); // Zero motor power and stop camera polling. Do not move servos.
+        robot.stop(); // Stop motors, CR servos, and camera polling. Keep positional servos unchanged.
     }
 
     /** Hardware-free tests can override native startup. */
